@@ -1,0 +1,16 @@
+{
+    "name": "open-fm-scrap",
+    "description": "open.fm playlist getter",
+    "license": "MIT",
+    "repository": "https://github.com/zan007/open-fm-scrap",
+    "dependencies": {
+        "puppeteer": "^1.13.0",
+        "mysql": "^2.16.0"
+    },
+    "devDependencies": {
+        "nodemon": "^1.18.10"
+    },
+    "scripts": {
+        "start": "nodemon index.js"
+    }
+}
