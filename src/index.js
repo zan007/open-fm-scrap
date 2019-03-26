@@ -1,4 +1,7 @@
+const DatabaseConnector = require('./services/database-connector');
+
 const puppeteer = require('puppeteer');
+const databaseConnector = new DatabaseConnector();
 const url = 'https://open.fm';
 
 scrapp = async () => {
@@ -8,7 +11,10 @@ scrapp = async () => {
     await page.goto(url);
 
     const STATIONS_IDS = {
-        ROCKS: 77
+        ROCKS: {
+            id: 77,
+            name: 'Rocks'
+        }
     };
 
     page.on('response', async (response) => {
@@ -17,7 +23,7 @@ scrapp = async () => {
             if (url.search('https://open.fm/api/api-ext/v2/channels/') !== -1) {
                 const responseJson = await response.json();
 
-                await updateChannels(responseJson.channels);
+                await addChannelSongs(responseJson, STATIONS_IDS.ROCKS);
             }
         } catch (err) {
             console.error(`Failed getting data from: ${url}`);
@@ -25,7 +31,30 @@ scrapp = async () => {
         }
     });
 
-    async function updateChannels (channels) {
+    async function addChannelSongs (data, channelData) {
+        const channel = data.channels.find((item) => item.id === channelData.id);
+
+        const track = channel.tracks[0];
+        console.log('channel', channel);
+        //channel.tracks.forEach((track) => {
+            const {song} = track;
+            console.log('song', song);
+
+            try {
+                databaseConnector.transaction(`
+                    INSERT INTO station (name) VALUES ('${channelData.name}');
+                    INSERT INTO artist (name) VALUES ('${song.artist}');
+                    INSERT INTO album (album_artist, name, year) values ((SELECT id_artist FROM artist WHERE name = '${song.artist}'), '${song.album.title}', '${song.album.year}');
+                    INSERT INTO song (title, song_album) VALUES ('${song.title}', (SELECT id_album from album where name = '${song.album.title}'));
+                    INSERT INTO song_station (id_song, id_station) VALUES ((SELECT id_song from song where title = '${song.title}'), (SELECT id_station FROM STATION WHERE name = '${channelData.name}'));
+                `);
+            } catch (err) {
+                console.log('catch transaction', err);
+            }
+        //})
+    }
+
+    /*async function updateChannels (channels) {
         channels.map((channel) => {
             const station = stationData[channel.id];
 
@@ -97,8 +126,10 @@ scrapp = async () => {
         });
 
         return songs
-    });
+    });*/
 };
+
+databaseConnector.connect();
 
 scrapp();
 
